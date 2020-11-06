@@ -47,8 +47,9 @@ class ZipReader(object):
 
     @staticmethod
     def imread(path, image_name):
+        vid_id = path.split("/")[-1].split(".")[0]
         zfile = ZipReader.build_file_dict(path)
-        data = zfile.read(image_name)
+        data = zfile.read(os.path.join(vid_id, image_name))
         im = Image.open(io.BytesIO(data))
         return im
 
@@ -117,6 +118,15 @@ class ToTorchFormatTensor(object):
             img = img.transpose(0, 1).transpose(0, 2).contiguous()
         img = img.float().div(255) if self.div else img.float()
         return img
+
+
+class Normalize(object):
+    def __init__(self):
+        self.mean = 0.5
+        self.std = 0.5
+    
+    def __call__(self, image_group):
+        return (image_group - self.mean) / self.std
 
 
 # ##########################################

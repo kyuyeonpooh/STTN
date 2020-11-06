@@ -23,7 +23,7 @@ from tensorboardX import SummaryWriter
 from torchvision.utils import make_grid, save_image
 import torch.distributed as dist
 
-from core.dataset import Dataset
+from core.dataset import Dataset, AVEDataset
 from core.loss import AdversarialLoss
 
 
@@ -38,7 +38,7 @@ class Trainer():
             self.config['trainer']['iterations'] = 5
 
         # setup data set and data loader
-        self.train_dataset = Dataset(config['data_loader'], split='train',  debug=debug)
+        self.train_dataset = AVEDataset(config['data_loader'], split='train')
         self.train_sampler = None
         self.train_args = config['trainer']
         if config['distributed']:
@@ -50,7 +50,9 @@ class Trainer():
             self.train_dataset,
             batch_size=self.train_args['batch_size'] // config['world_size'],
             shuffle=(self.train_sampler is None), 
-            num_workers=self.train_args['num_workers'])
+            num_workers=self.train_args['num_workers'],
+            sampler=self.train_sampler,
+            pin_memory=True)
 
         # set loss functions 
         self.adversarial_loss = AdversarialLoss(type=self.config['losses']['GAN_LOSS'])
@@ -78,15 +80,11 @@ class Trainer():
             self.netG = DDP(
                 self.netG, 
                 device_ids=[self.config['local_rank']], 
-                output_device=self.config['local_rank'],
-                broadcast_buffers=True, 
-                find_unused_parameters=False)
+                output_device=self.config['local_rank'])
             self.netD = DDP(
                 self.netD, 
                 device_ids=[self.config['local_rank']], 
-                output_device=self.config['local_rank'],
-                broadcast_buffers=True, 
-                find_unused_parameters=False)
+                output_device=self.config['local_rank'])
 
         # set summary writer
         self.dis_writer = None
@@ -259,7 +257,7 @@ class Trainer():
             if self.config['global_rank'] == 0:
                 pbar.update(1)
                 pbar.set_description((
-                    f"d: {dis_loss.item():.3f}; g: {gan_loss.item():.3f};"
+                    f"d: {dis_loss.item():.3f}; g: {gan_loss.item():+.3f}; "
                     f"hole: {hole_loss.item():.3f}; valid: {valid_loss.item():.3f}")
                 )
 

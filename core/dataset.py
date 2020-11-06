@@ -12,11 +12,72 @@ import math
 import numpy as np
 import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 from PIL import Image, ImageFilter
 from skimage.color import rgb2gray, gray2rgb
 from core.utils import ZipReader, create_random_shape_with_random_motion
-from core.utils import Stack, ToTorchFormatTensor, GroupRandomHorizontalFlip
+from core.utils import Stack, ToTorchFormatTensor, GroupRandomHorizontalFlip, Normalize
+
+
+class AVEDataset(Dataset):
+    def __init__(self, args: dict, split="train"):
+        self.args = args
+        self.split = split
+        self.ref_count = 5
+        self.image_shape = self.image_width, self.image_height = (360, 240)
+        assert self.split in ["train", "val", "test"]
+
+        self.video_dict = dict()
+        for video_id in os.listdir(f"../agvi/dataset/{split}/image"):
+            self.video_dict[video_id] = len(os.listdir(f"../agvi/dataset/{split}/image/{video_id}"))
+        self.video_ids = list(self.video_dict.keys())
+
+        self.mask_transforms = transforms.Compose([
+            Stack(),
+            ToTorchFormatTensor()
+        ])
+        self.image_transforms = transforms.Compose([
+            Stack(),
+            ToTorchFormatTensor(),
+            Normalize()
+        ])
+    
+    def __len__(self):
+        return len(self.video_ids)
+
+    def __getitem__(self, index):
+        video_id = self.video_ids[index]
+        all_frames = [f"{str(i).zfill(3)}.png" for i in range(self.video_dict[video_id])]
+        all_masks = create_random_shape_with_random_motion(len(all_frames), self.image_height, self.image_width)
+        ref_index = self.get_ref_index(len(all_frames), self.ref_count)
+
+        frames = list()
+        masks = list()
+        for i in ref_index:
+            image_path = f"../agvi/dataset/{self.split}/image/{video_id}/{all_frames[i]}"
+            image = Image.open(image_path)
+            if image.size != self.image_shape:
+                image.resize(self.image_shape)
+            frames.append(image)
+            masks.append(all_masks[i])
+        
+        if self.split == "train":
+            if random.uniform(0, 1) > 0.5:
+                hflip = transforms.RandomHorizontalFlip(1.)
+                frames = [hflip(frame) for frame in frames]
+        
+        frame_tensors = self.image_transforms(frames)
+        mask_tensors = self.mask_transforms(masks)
+        return frame_tensors, mask_tensors
+
+    def get_ref_index(self, length, ref_count):
+        if random.uniform(0, 1) > 0.5:
+            ref_index = random.sample(range(length), ref_count)
+            ref_index.sort()
+        else:
+            pivot = random.randint(0, length-ref_count)
+            ref_index = [pivot+i for i in range(ref_count)]
+        return ref_index
 
 
 class Dataset(torch.utils.data.Dataset):

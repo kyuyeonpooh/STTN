@@ -66,8 +66,11 @@ class InpaintGenerator(BaseNetwork):
     def __init__(self, init_weights=True):
         super(InpaintGenerator, self).__init__()
         channel = 256
-        stack_num = 8
-        patchsize = [(108, 60), (36, 20), (18, 10), (9, 5)]
+        #stack_num = 8
+        #patchsize = [(108, 60), (36, 20), (18, 10), (9, 5)]
+        stack_num = 1
+        patchsize = [(90, 60), (30, 20), (15, 10), (9, 6)]
+        #patchsize= [(80, 60), (40, 30), (20, 15), (8, 6)]
         blocks = []
         for _ in range(stack_num):
             blocks.append(TransformerBlock(patchsize, hidden=channel))
@@ -180,8 +183,8 @@ class MultiHeadedAttention(nn.Module):
         _key = self.key_embedding(x)
         _value = self.value_embedding(x)
         for (width, height), query, key, value in zip(self.patchsize,
-                                                      torch.chunk(_query, len(self.patchsize), dim=1), torch.chunk(
-                                                          _key, len(self.patchsize), dim=1),
+                                                      torch.chunk(_query, len(self.patchsize), dim=1),
+                                                      torch.chunk(_key, len(self.patchsize), dim=1),
                                                       torch.chunk(_value, len(self.patchsize), dim=1)):
             out_w, out_h = w // width, h // height
             mm = m.view(b, t, 1, out_h, height, out_w, width)

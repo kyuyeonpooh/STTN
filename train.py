@@ -16,9 +16,9 @@ from core.dist import (
 )
 
 parser = argparse.ArgumentParser(description='STTN')
-parser.add_argument('-c', '--config', default='configs/youtube-vos.json', type=str)
+parser.add_argument('-c', '--config', default='configs/ave.json', type=str)
 parser.add_argument('-m', '--model', default='sttn', type=str)
-parser.add_argument('-p', '--port', default='23455', type=str)
+parser.add_argument('-p', '--port', default='29500', type=str)
 parser.add_argument('-e', '--exam', action='store_true')
 args = parser.parse_args()
 
@@ -56,8 +56,7 @@ def main_worker(rank, config):
     trainer.train()
 
 
-if __name__ == "__main__":
-    
+if __name__ == "__main__":    
     # loading configs
     config = json.load(open(args.config))
     config['model'] = args.model

@@ -32,7 +32,6 @@ dependencies:
     - chainer==7.7.0
     - chardet==3.0.4
     - cpython==0.0.6
-    - cupy==7.7.0
     - cycler==0.10.0
     - cython==0.29.21
     - decorator==4.4.2
@@ -42,8 +41,6 @@ dependencies:
     - filelock==3.0.12
     - future==0.18.2
     - gast==0.3.3
-    - google-auth==1.17.2
-    - google-auth-oauthlib==0.4.1
     - grpcio==1.29.0
     - h5py==2.10.0
     - idna==2.9
@@ -89,7 +86,6 @@ dependencies:
     - pyasn1==0.4.8
     - pyasn1-modules==0.2.8
     - pybind11==2.5.0
-    - pycuda==2019.1.2
     - pygments==2.6.1
     - pymongo==3.11.0
     - pyparsing==2.4.7
