@@ -19,6 +19,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.nn.parallel import DataParallel
 from tensorboardX import SummaryWriter
 from torchvision.utils import make_grid, save_image
 import torch.distributed as dist
@@ -41,17 +42,11 @@ class Trainer():
         self.train_dataset = AVEDataset(config['data_loader'], split='train')
         self.train_sampler = None
         self.train_args = config['trainer']
-        if config['distributed']:
-            self.train_sampler = DistributedSampler(
-                self.train_dataset,
-                num_replicas=config['world_size'], 
-                rank=config['global_rank'])
         self.train_loader = DataLoader(
             self.train_dataset,
-            batch_size=self.train_args['batch_size'] // config['world_size'],
-            shuffle=(self.train_sampler is None), 
+            batch_size=self.train_args['batch_size'],
+            shuffle=True,
             num_workers=self.train_args['num_workers'],
-            sampler=self.train_sampler,
             pin_memory=True)
 
         # set loss functions 
@@ -77,14 +72,8 @@ class Trainer():
         self.load()
 
         if config['distributed']:
-            self.netG = DDP(
-                self.netG, 
-                device_ids=[self.config['local_rank']], 
-                output_device=self.config['local_rank'])
-            self.netD = DDP(
-                self.netD, 
-                device_ids=[self.config['local_rank']], 
-                output_device=self.config['local_rank'])
+            self.netG = DataParallel(self.netG)
+            self.netD = DataParallel(self.netD)
 
         # set summary writer
         self.dis_writer = None
@@ -102,8 +91,7 @@ class Trainer():
 
      # learning rate scheduler, step
     def adjust_learning_rate(self):
-        decay = 0.1**(min(self.iteration,
-                          self.config['trainer']['niter_steady']) // self.config['trainer']['niter'])
+        decay = 0.1**(min(self.iteration, self.config['trainer']['niter_steady']) // self.config['trainer']['niter'])
         new_lr = self.config['trainer']['lr'] * decay
         if new_lr != self.get_lr():
             for param_group in self.optimG.param_groups:
@@ -120,6 +108,17 @@ class Trainer():
             writer.add_scalar(name, self.summary[name]/100, self.iteration)
             self.summary[name] = 0
 
+    # add image
+    def add_images(self, writer, input_image, output_image, gt_image):
+        if writer is not None and self.iteration % 100 == 0:
+            b, t, c, h, w = input_image.size()
+            input_image = input_image.view(b * t, c, h, w)
+            output_image = output_image.view(b * t, c, h, w)
+            gt_image = gt_image.view(b * t, c, h, w)
+            writer.add_image("input/input_image", make_grid((input_image + 1) / 2, t), self.iteration)
+            writer.add_image("output/output_image", make_grid((output_image + 1) / 2, t), self.iteration)
+            writer.add_image("output/gt_image", make_grid((gt_image + 1) / 2, t), self.iteration)
+
     # load netG and netD
     def load(self):
         model_path = self.config['save_dir']
@@ -132,12 +131,9 @@ class Trainer():
             ckpts.sort()
             latest_epoch = ckpts[-1] if len(ckpts) > 0 else None
         if latest_epoch is not None:
-            gen_path = os.path.join(
-                model_path, 'gen_{}.pth'.format(str(latest_epoch).zfill(5)))
-            dis_path = os.path.join(
-                model_path, 'dis_{}.pth'.format(str(latest_epoch).zfill(5)))
-            opt_path = os.path.join(
-                model_path, 'opt_{}.pth'.format(str(latest_epoch).zfill(5)))
+            gen_path = os.path.join(model_path, 'gen_{}.pth'.format(str(latest_epoch).zfill(5)))
+            dis_path = os.path.join(model_path, 'dis_{}.pth'.format(str(latest_epoch).zfill(5)))
+            opt_path = os.path.join(model_path, 'opt_{}.pth'.format(str(latest_epoch).zfill(5)))
             if self.config['global_rank'] == 0:
                 print('Loading model from {}...'.format(gen_path))
             data = torch.load(gen_path, map_location=self.config['device'])
@@ -187,8 +183,8 @@ class Trainer():
         
         while True:
             self.epoch += 1
-            if self.config['distributed']:
-                self.train_sampler.set_epoch(self.epoch)
+            # if self.config['distributed']:
+            #     self.train_sampler.set_epoch(self.epoch)
 
             self._train_epoch(pbar)
             if self.iteration > self.train_args['iterations']:
@@ -252,6 +248,8 @@ class Trainer():
             self.optimG.zero_grad()
             gen_loss.backward()
             self.optimG.step()
+
+            self.add_images(self.gen_writer, masked_frame.cpu().detach(), comp_img.cpu().detach(), frames.cpu().detach())
 
             # console logs
             if self.config['global_rank'] == 0:

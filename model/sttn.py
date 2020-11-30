@@ -68,9 +68,10 @@ class InpaintGenerator(BaseNetwork):
         channel = 256
         #stack_num = 8
         #patchsize = [(108, 60), (36, 20), (18, 10), (9, 5)]
-        stack_num = 1
-        patchsize = [(90, 60), (30, 20), (15, 10), (9, 6)]
-        #patchsize= [(80, 60), (40, 30), (20, 15), (8, 6)]
+        stack_num = 8
+        #patchsize = [(90, 60), (30, 20), (15, 10), (9, 6)] # for (360, 240)
+        #patchsize= [(80, 60), (40, 30), (20, 15), (8, 6)] # for (320, 240)
+        patchsize = [(64, 64), (32, 32), (16, 16), (8, 8)] # for (256, 256)
         blocks = []
         for _ in range(stack_num):
             blocks.append(TransformerBlock(patchsize, hidden=channel))

@@ -26,16 +26,6 @@ args = parser.parse_args()
 def main_worker(rank, config):
     if 'local_rank' not in config:
         config['local_rank'] = config['global_rank'] = rank
-    if config['distributed']:
-        torch.cuda.set_device(int(config['local_rank']))
-        torch.distributed.init_process_group(backend='nccl',
-                                             init_method=config['init_method'],
-                                             world_size=config['world_size'],
-                                             rank=config['global_rank'],
-                                             group_name='mtorch'
-                                             )
-        print('using GPU {}-{} for training'.format(
-            int(config['global_rank']), int(config['local_rank'])))
 
     config['save_dir'] = os.path.join(config['save_dir'], '{}_{}'.format(config['model'],
                                                                          os.path.basename(args.config).split('.')[0]))
@@ -67,12 +57,4 @@ if __name__ == "__main__":
     config['init_method'] = f"tcp://{get_master_ip()}:{args.port}"
     config['distributed'] = True if config['world_size'] > 1 else False
 
-    # setup distributed parallel training environments
-    if get_master_ip() == "127.0.0.1":
-        # manually launch distributed processes 
-        mp.spawn(main_worker, nprocs=config['world_size'], args=(config,))
-    else:
-        # multiple processes have been launched by openmpi 
-        config['local_rank'] = get_local_rank()
-        config['global_rank'] = get_global_rank()
-        main_worker(-1, config)
+    main_worker(0, config)

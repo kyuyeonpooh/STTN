@@ -1,5 +1,6 @@
 */__pycache__/
-release_model
+release_model*
+runs
 *.log
 debug.py
 *.avi

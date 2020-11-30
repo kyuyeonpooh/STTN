@@ -22,14 +22,15 @@ from core.utils import Stack, ToTorchFormatTensor, GroupRandomHorizontalFlip, No
 class AVEDataset(Dataset):
     def __init__(self, args: dict, split="train"):
         self.args = args
+        self.data_root = args["data_root"]
         self.split = split
-        self.ref_count = 5
-        self.image_shape = self.image_width, self.image_height = (360, 240)
+        self.ref_count = args["sample_length"]
+        self.image_shape = self.image_width, self.image_height = (args["w"], args["h"])
         assert self.split in ["train", "val", "test"]
 
         self.video_dict = dict()
-        for video_id in os.listdir(f"../agvi/dataset/{split}/image"):
-            self.video_dict[video_id] = len(os.listdir(f"../agvi/dataset/{split}/image/{video_id}"))
+        for video_id in os.listdir(f"{self.data_root}/{split}/image"):
+            self.video_dict[video_id] = len(os.listdir(f"{self.data_root}/{split}/image/{video_id}"))
         self.video_ids = list(self.video_dict.keys())
 
         self.mask_transforms = transforms.Compose([
@@ -39,7 +40,7 @@ class AVEDataset(Dataset):
         self.image_transforms = transforms.Compose([
             Stack(),
             ToTorchFormatTensor(),
-            Normalize()
+            Normalize(0.5, 0.5)
         ])
     
     def __len__(self):
@@ -54,10 +55,10 @@ class AVEDataset(Dataset):
         frames = list()
         masks = list()
         for i in ref_index:
-            image_path = f"../agvi/dataset/{self.split}/image/{video_id}/{all_frames[i]}"
+            image_path = f"{self.data_root}/{self.split}/image/{video_id}/{all_frames[i]}"
             image = Image.open(image_path)
             if image.size != self.image_shape:
-                image.resize(self.image_shape)
+                image = image.resize(self.image_shape)
             frames.append(image)
             masks.append(all_masks[i])
         

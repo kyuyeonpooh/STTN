@@ -115,15 +115,15 @@ class ToTorchFormatTensor(object):
             img = img.view(pic.size[1], pic.size[0], len(pic.mode))
             # put it from HWC to CHW format
             # yikes, this transpose takes 80% of the loading time/CPU
-            img = img.transpose(0, 1).transpose(0, 2).contiguous()
+            img = img.transpose(2, 0, 1).contiguous()
         img = img.float().div(255) if self.div else img.float()
         return img
 
 
 class Normalize(object):
-    def __init__(self):
-        self.mean = 0.5
-        self.std = 0.5
+    def __init__(self, mean=0.5, std=0.5):
+        self.mean = mean
+        self.std = std
     
     def __call__(self, image_group):
         return (image_group - self.mean) / self.std
