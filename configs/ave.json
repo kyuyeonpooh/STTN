@@ -1,9 +1,10 @@
 {
     "seed": 2020,
-    "save_dir": "runs/STTN_baseline_256x256",
+    "save_dir": "runs/sttn_baseline_nvidia_mask",
     "data_loader": {
         "name": "ave",
-        "data_root": "../agvi/dataset_256x256",
+        "data_root": "../agvi/__datasets/AVE_256x256",
+        "mask_root": "../agvi/__datasets/NVIDIA_irregular_mask",
         "w": 256,
         "h": 256,
         "sample_length": 5

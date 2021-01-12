@@ -23,6 +23,7 @@ class AVEDataset(Dataset):
     def __init__(self, args: dict, split="train"):
         self.args = args
         self.data_root = args["data_root"]
+        self.mask_dir = args["mask_root"]
         self.split = split
         self.ref_count = args["sample_length"]
         self.image_shape = self.image_width, self.image_height = (args["w"], args["h"])
@@ -32,6 +33,9 @@ class AVEDataset(Dataset):
         for video_id in os.listdir(f"{self.data_root}/{split}/image"):
             self.video_dict[video_id] = len(os.listdir(f"{self.data_root}/{split}/image/{video_id}"))
         self.video_ids = list(self.video_dict.keys())
+
+        self.vflipper = transforms.RandomVerticalFlip(1.)
+        self.hflipper = transforms.RandomHorizontalFlip(1.)
 
         self.mask_transforms = transforms.Compose([
             Stack(),
@@ -50,6 +54,13 @@ class AVEDataset(Dataset):
         video_id = self.video_ids[index]
         all_frames = [f"{str(i).zfill(3)}.png" for i in range(self.video_dict[video_id])]
         all_masks = create_random_shape_with_random_motion(len(all_frames), self.image_height, self.image_width)
+        mask_path = f"{self.mask_dir}/{str(random.randrange(0, 12000)).zfill(5)}.png"
+        mask = Image.open(mask_path).resize((self.image_height, self.image_width)).convert("L")
+        if random.uniform(0, 1) > 0.5:
+            mask = self.hflipper(mask)
+        if random.uniform(0, 1) > 0.5:
+            mask = self.vflipper(mask)
+        all_masks = [mask] * len(all_frames)
         ref_index = self.get_ref_index(len(all_frames), self.ref_count)
 
         frames = list()
