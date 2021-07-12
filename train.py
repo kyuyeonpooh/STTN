@@ -16,7 +16,7 @@ from core.dist import (
 )
 
 parser = argparse.ArgumentParser(description='STTN')
-parser.add_argument('-c', '--config', default='configs/ave.json', type=str)
+parser.add_argument('-c', '--config', default='configs/music.json', type=str)
 parser.add_argument('-m', '--model', default='sttn', type=str)
 parser.add_argument('-p', '--port', default='29500', type=str)
 parser.add_argument('-e', '--exam', action='store_true')

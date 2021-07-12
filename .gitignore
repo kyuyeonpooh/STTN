@@ -9,7 +9,7 @@ debug.py
 checkpoints
 examples/*_result.mp4
 *.jpg
-*.png
+datasets/**/*.png
 *.zip
 *.wav
 .tensorboard-info

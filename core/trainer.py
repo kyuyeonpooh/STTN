@@ -24,7 +24,7 @@ from tensorboardX import SummaryWriter
 from torchvision.utils import make_grid, save_image
 import torch.distributed as dist
 
-from core.dataset import Dataset, AVEDataset, MUSICDataset
+from core.dataset import DemoDataset
 from core.loss import AdversarialLoss
 
 
@@ -39,7 +39,7 @@ class Trainer():
             self.config['trainer']['iterations'] = 5
 
         # setup data set and data loader
-        self.train_dataset = MUSICDataset(config['data_loader'], split='train')
+        self.train_dataset = DemoDataset(config['data_loader'], split='train')
         self.train_sampler = None
         self.train_args = config['trainer']
         self.train_loader = DataLoader(

@@ -150,6 +150,54 @@ class AVEDataset(Dataset):
         return ref_index
 
 
+class DemoDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset_args: dict, split='train'):
+        self.dataset_args = dataset_args
+        self.ref_frames = dataset_args["sample_length"]
+        self.image_width, self.image_height = dataset_args["w"], dataset_args["h"]
+        self.image_shape = (self.image_width, self.image_height)
+
+        self.hflipper = transforms.RandomHorizontalFlip(1.)
+        self.image_transforms = transforms.Compose([
+            Stack(),
+            ToTorchFormatTensor(),
+            Normalize()
+        ])
+        self.mask_transforms = transforms.Compose([
+            Stack(),
+            ToTorchFormatTensor()
+        ])
+
+    def __len__(self):
+        return 3000
+
+    def __getitem__(self, index):  # (B, T, C, H, W)
+        frames = list()
+        masks = create_fixed_rectangular_mask(5, 256, 256, 42)
+        
+        for i in range(5):
+            image = Image.open('example.png')
+            image = image.resize(self.image_shape)
+            frames.append(image)
+        if random.uniform(0, 1) > 0.5:
+            frames = [self.hflipper(frame) for frame in frames]
+
+        frame_tensors = self.image_transforms(frames)  # (T, C, H, W)
+        mask_tensors = self.mask_transforms(masks)
+        data_dict = frame_tensors, mask_tensors
+        return data_dict
+
+    # Index sampling function
+    def get_frame_index(self, length, ref_count):
+        if random.uniform(0, 1) > 0.5:
+            ref_index = random.sample(range(length), ref_count)
+            ref_index.sort()
+        else:
+            pivot = random.randint(0, length-ref_count)
+            ref_index = [pivot+i for i in range(ref_count)]
+        return ref_index
+
+
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, args: dict, split='train', debug=False):
         self.args = args

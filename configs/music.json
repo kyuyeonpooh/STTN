@@ -1,6 +1,6 @@
 {
     "seed": 2020,
-    "save_dir": "runs/sttn_baseline_music_rectangle_train",
+    "save_dir": "runs/sttn_music_rectangle",
     "data_loader": {
         "name": "MUSIC-Solo",
         "root_dir": "datasets/music-solo/train",
