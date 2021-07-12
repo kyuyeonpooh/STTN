@@ -132,6 +132,13 @@ class Normalize(object):
 # ##########################################
 # ##########################################
 
+def create_fixed_rectangular_mask(video_length, image_height, image_width, size):
+    h, w = image_height, image_width
+    m = np.zeros((h, w), np.uint8)
+    m[h // 2- size:h // 2 + size, w // 2 - size : w // 2 + size] = 255
+    masks = [Image.fromarray(m).convert("L")] * video_length
+    return masks
+
 def create_random_shape_with_random_motion(video_length, imageHeight=240, imageWidth=432):
     # get a random shape
     height = random.randint(imageHeight//3, imageHeight-1)

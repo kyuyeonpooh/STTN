@@ -1,0 +1,33 @@
+{
+    "seed": 2020,
+    "save_dir": "runs/sttn_baseline_music_rectangle_train",
+    "data_loader": {
+        "name": "MUSIC-Solo",
+        "root_dir": "datasets/music-solo/train",
+        "mask_root": "",
+        "w": 256,
+        "h": 256,
+        "sample_length": 5
+    },
+    "losses": {
+        "hole_weight": 1.0,
+        "valid_weight": 1.0,
+        "adversarial_weight": 0.01,
+        "GAN_LOSS": "hinge"
+    },
+    "trainer": {
+        "type": "Adam",
+        "beta1": 0,
+        "beta2": 0.99,
+        "lr": 1e-4,
+        "batch_size": 8,
+        "num_workers": 4,
+        "verbosity": 2,
+        "log_step": 100,
+        "save_freq": 1000,
+        "valid_freq": 1000, 
+        "iterations": 300000,
+        "niter": 100000,
+        "niter_steady": 200000
+    }
+}

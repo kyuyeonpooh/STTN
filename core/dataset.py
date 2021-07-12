@@ -15,8 +15,66 @@ import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image, ImageFilter
 from skimage.color import rgb2gray, gray2rgb
-from core.utils import ZipReader, create_random_shape_with_random_motion
+from core.utils import ZipReader, create_fixed_rectangular_mask, create_random_shape_with_random_motion
 from core.utils import Stack, ToTorchFormatTensor, GroupRandomHorizontalFlip, Normalize
+
+
+class MUSICDataset(Dataset):
+    def __init__(self, dataset_args: dict, split='train'):
+        self.dataset_args = dataset_args
+        self.root_dir = dataset_args["root_dir"]
+        self.ref_frames = dataset_args["sample_length"]
+        self.image_width, self.image_height = dataset_args["w"], dataset_args["h"]
+        self.image_shape = (self.image_width, self.image_height)
+
+        self.video_dict = dict()
+        for video_id in os.listdir(f"{self.root_dir}/png"):
+            self.video_dict[video_id] = len(os.listdir(f"{self.root_dir}/png/{video_id}"))
+        self.video_ids = sorted(list(self.video_dict.keys()))
+
+        self.hflipper = transforms.RandomHorizontalFlip(1.)
+        self.image_transforms = transforms.Compose([
+            Stack(),
+            ToTorchFormatTensor(),
+            Normalize()
+        ])
+        self.mask_transforms = transforms.Compose([
+            Stack(),
+            ToTorchFormatTensor()
+        ])
+
+    def __len__(self):
+        return len(self.video_ids)
+
+    def __getitem__(self, index):  # (B, T, C, H, W)
+        video_id = self.video_ids[index]
+        all_frames = [f"{str(i).zfill(5)}.png" for i in range(1, self.video_dict[video_id] + 1)]
+        sampled_idxs = self.get_frame_index(len(all_frames), self.ref_frames)
+        frames = list()
+        masks = create_fixed_rectangular_mask(5, 256, 256, 42)
+        
+        for i in sampled_idxs:
+            image_path = f"{self.root_dir}/png/{video_id}/{all_frames[i]}"
+            image = Image.open(image_path)
+            assert image.size == self.image_shape
+            frames.append(image)
+        if random.uniform(0, 1) > 0.5:
+            frames = [self.hflipper(frame) for frame in frames]
+
+        frame_tensors = self.image_transforms(frames)  # (T, C, H, W)
+        mask_tensors = self.mask_transforms(masks)
+        data_dict = frame_tensors, mask_tensors
+        return data_dict
+
+    # Index sampling function
+    def get_frame_index(self, length, ref_count):
+        if random.uniform(0, 1) > 0.5:
+            ref_index = random.sample(range(length), ref_count)
+            ref_index.sort()
+        else:
+            pivot = random.randint(0, length-ref_count)
+            ref_index = [pivot+i for i in range(ref_count)]
+        return ref_index
 
 
 class AVEDataset(Dataset):

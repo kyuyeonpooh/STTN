@@ -11,3 +11,5 @@ examples/*_result.mp4
 *.jpg
 *.png
 *.zip
+*.wav
+.tensorboard-info
